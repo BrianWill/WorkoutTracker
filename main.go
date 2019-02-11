@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -33,8 +34,8 @@ func fmtDuration(d time.Duration) string {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	//port := os.Getenv("PORT")
-	port := "5001"
+	port := os.Getenv("PORT")
+	//port := "5001"
 
 	if port == "" {
 		log.Fatal("$PORT must be set")
