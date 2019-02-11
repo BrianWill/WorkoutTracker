@@ -39,6 +39,12 @@
 			"revisionTime": "2019-02-05T22:20:52Z"
 		},
 		{
+			"checksumSHA1": "EFilcRi6b0Bf3nckKo3UbeqoW50=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "95ba29eb981bbb27d92e1f70bf8a1949452d926b",
+			"revisionTime": "2018-12-06T07:02:39Z"
+		},
+		{
 			"checksumSHA1": "qHpoguf0n1mueKbYN5/Cr10461M=",
 			"path": "github.com/heroku/x/hmetrics",
 			"revision": "85e5aa5e6aa19919252eec6561dcafafba3be425",
