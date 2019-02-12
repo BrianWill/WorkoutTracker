@@ -1,35 +1,18 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	_ "github.com/heroku/x/hmetrics/onload"
+	_ "github.com/lib/pq"
 )
-
-var wsupgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
-func fmtDuration(d time.Duration) string {
-	d = d.Round(time.Minute)
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	s := ""
-	if h > 0 {
-		s += strconv.Itoa(int(h)) + " hrs "
-	}
-	s += strconv.Itoa(int(m)) + " min"
-	return s
-}
 
 func main() {
 
@@ -41,13 +24,52 @@ func main() {
 		log.Fatal("$PORT must be set")
 	}
 
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("Error opening database: %q", err)
+	}
+
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.LoadHTMLGlob("templates/*.tmpl")
 	router.Static("/static", "static")
 
+	router.Static("/gojs", "gojs")
+
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "home.tmpl", nil)
+	})
+
+	router.GET("/tick", func(c *gin.Context) {
+		if _, err := db.Exec("CREATE TABLE IF NOT EXISTS ticks (tick timestamp)"); err != nil {
+			c.String(http.StatusInternalServerError,
+				fmt.Sprintf("Error creating database table: %q", err))
+			return
+		}
+
+		if _, err := db.Exec("INSERT INTO ticks VALUES (now())"); err != nil {
+			c.String(http.StatusInternalServerError,
+				fmt.Sprintf("Error incrementing tick: %q", err))
+			return
+		}
+
+		rows, err := db.Query("SELECT tick FROM ticks")
+		if err != nil {
+			c.String(http.StatusInternalServerError,
+				fmt.Sprintf("Error reading ticks: %q", err))
+			return
+		}
+
+		defer rows.Close()
+		for rows.Next() {
+			var tick time.Time
+			if err := rows.Scan(&tick); err != nil {
+				c.String(http.StatusInternalServerError,
+					fmt.Sprintf("Error scanning ticks: %q", err))
+				return
+			}
+			c.String(http.StatusOK, fmt.Sprintf("Read from DB: %s\n", tick.String()))
+		}
 	})
 
 	router.Run(":" + port)
