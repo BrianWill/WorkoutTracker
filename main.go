@@ -32,10 +32,10 @@ func fmtDuration(d time.Duration) string {
 }
 
 func main() {
+
 	rand.Seed(time.Now().UnixNano())
 
 	port := os.Getenv("PORT")
-	//port := "5001"
 
 	if port == "" {
 		log.Fatal("$PORT must be set")
