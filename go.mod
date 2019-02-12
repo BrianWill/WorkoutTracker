@@ -4,8 +4,6 @@ require (
 	github.com/gin-contrib/sse v0.0.0-20190125020943-a7658810eb74 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/golang/protobuf v1.2.0 // indirect
-	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
-	github.com/gorilla/websocket v1.4.0
 	github.com/heroku/x v0.0.0-20181102215100-85e5aa5e6aa1
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/lib/pq v1.0.0
