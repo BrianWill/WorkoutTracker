@@ -1,0 +1,37 @@
+
+
+server stores and retrieves the users JSON (everything!)
+
+    server validates that the JSON is properly formed, but data integrity could just be left up to the client
+
+
+
+list user's workouts
+
+list user's workout templates
+
+list user's exercises templates
+
+
+select workout to see its contents
+
+    a workout that hasn't finished yet can still be edited
+
+    create new empty workout
+
+
+    create new workout from existing workout or template
+
+        (+workout button lists <blank workout> and all templates)
+
+
+workout template (a workout that has startTime of 0)
+
+    can be edited
+    cannot be finished
+    sets only have expected vals, not actual
+
+
+public repo of workout templates and exercises
+
+    browse and add templates and exercises to your user list of tempaltes and exercises
