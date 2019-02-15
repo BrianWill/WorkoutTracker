@@ -8,8 +8,8 @@ type User struct {
 	Name string
 	// todo how is int64 represented in JS?
 	Workouts  map[int64]*Workout // indexed by StartTime
-	Templates []Workout          // user's personal list of templates
-	Exercises []Exercise         // user's personal list of exercises (SetsExpected used but Sets is empty)
+	Templates []Workout          // user's favorite templates
+	Exercises []Exercise         // user's favorite exercises (SetsExpected used but Sets is empty)
 }
 
 type Workout struct {
@@ -30,7 +30,7 @@ type Set struct {
 	Reps     int
 	Weight   int
 	Duration int // time in milliseconds of time to perform set
-	Rest     int // time in milliseconds of rest before next exercise
+	Rest     int // time in milliseconds of rest before next set/exercise
 }
 
 func main() {

@@ -1,8 +1,8 @@
 
-
 server stores and retrieves the users JSON (everything!)
 
     server validates that the JSON is properly formed, but data integrity could just be left up to the client
+
 
 
 
