@@ -1,24 +1,29 @@
 package main
 
 import (
-	"database/sql"
+	"bytes"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"sync"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/heroku/x/hmetrics/onload"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	"upper.io/db.v3/lib/sqlbuilder"
+	"upper.io/db.v3/postgresql"
+	"upper.io/db.v3/sqlite"
 )
 
-const filePath = "userData.dat"
+const sqliteFilePath = "userData.dat"
 
 type User struct {
-	Name string
+	Name     string
+	Password string
 	// todo how is int64 represented in JS?
 	Workouts  map[int64]*Workout // indexed by StartTime
 	Templates []Workout          // user's personal list of templates
@@ -46,50 +51,42 @@ type Set struct {
 	Rest     int // time in milliseconds of rest before next exercise
 }
 
-type UserMap struct {
-	sync.RWMutex
-	internal map[string]string
-}
-
-func NewUserMap() *UserMap {
-	return &UserMap{
-		internal: make(map[string]string),
-	}
-}
-
-func (um *UserMap) Exists(key string) bool {
-	um.RLock()
-	_, ok := um.internal[key]
-	um.RUnlock()
-	return ok
-}
-
-func (um *UserMap) Delete(key string) {
-	um.Lock()
-	delete(um.internal, key)
-	um.Unlock()
-}
-
-func (um *UserMap) Store(userID string, data string) {
-	um.Lock()
-	um.internal[userID] = data
-	um.Unlock()
-}
-
-func initUser() User {
-	return User{}
-}
-
-func initPostgres(db *sql.DB) error {
+func initPostgres(db sqlbuilder.Database) error {
 
 	return nil
 }
 
-func initSqlite(db *sql.DB) error {
+type UserDB struct {
+	ID       uint64 `db:"id,omitempty"`
+	Name     string `db:"name"`
+	Password string `db:"password"`
+}
+
+func initSqlite(db sqlbuilder.Database) error {
 	if _, err := db.Exec(
 		`CREATE TABLE IF NOT EXISTS users(
 			id INTEGER PRIMARY KEY,
-   			name TEXT NOT NULL,
+			name TEXT NOT NULL,
+			password TEXT NOT NULL
+		)`); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(
+		`CREATE TABLE IF NOT EXISTS exercises(
+			id INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			notes TEXT NOT NULL
+		)`); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(
+		`CREATE TABLE IF NOT EXISTS workouts(
+			id INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			startTime INTEGER NOT NULL,
+			endTime INTEGER NOT NULL
 		)`); err != nil {
 		return err
 	}
@@ -105,27 +102,10 @@ func initSqlite(db *sql.DB) error {
 			weightExpected   INTEGER NOT NULL,
 			durationExpected INTEGER NOT NULL,
 			restExpected     INTEGER NOT NULL,
+			exercise INTEGER NOT NULL,
+			workout INTEGER NOT NULL,
 			FOREIGN KEY (exercise) REFERENCES exercises(id),
-			FOREIGN KEY (workout) REFERENCES workouts(id),
-		)`); err != nil {
-		return err
-	}
-
-	if _, err := db.Exec(
-		`CREATE TABLE IF NOT EXISTS exercises(
-			id INTEGER PRIMARY KEY,
-			name TEXT NOT NULL,
-			notes TEXT NOT NULL,
-		)`); err != nil {
-		return err
-	}
-
-	if _, err := db.Exec(
-		`CREATE TABLE IF NOT EXISTS workouts(
-			id INTEGER PRIMARY KEY,
-			name TEXT NOT NULL,
-			startTime INTEGER NOT NULL,
-			endTime INTEGER NOT NULL,
+			FOREIGN KEY (workout) REFERENCES workouts(id)
 		)`); err != nil {
 		return err
 	}
@@ -136,7 +116,7 @@ func initSqlite(db *sql.DB) error {
 			exercise INTEGER NOT NULL,
 			workout INTEGER NOT NULL,
 			FOREIGN KEY (exercise) REFERENCES exercises(id),
-			FOREIGN KEY (workout) REFERENCES workouts(id),
+			FOREIGN KEY (workout) REFERENCES workouts(id)
 		)`); err != nil {
 		return err
 	}
@@ -150,14 +130,20 @@ func main() {
 	if port == "" {
 		log.Fatal("$PORT must be set")
 	}
-	dev := os.Getenv("DEV") == "true"
+	dev := os.Getenv("DEV") == "1"
 
-	var db *sql.DB
 	var err error
+	var db sqlbuilder.Database
 	if dev {
-		db, err = sql.Open("sqlite3", "./dev.db")
+		fmt.Println("DEV MODE")
+		db, err = sqlite.Open(sqlite.ConnectionURL{sqliteFilePath, nil})
 	} else {
-		db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
+		fmt.Println("PRODUCTION MODE")
+		connURL, connErr := postgresql.ParseURL(os.Getenv("DATABASE_URL"))
+		if connErr != nil {
+			log.Fatalf("Error with Postgres connection string: %q", err)
+		}
+		db, err = postgresql.Open(connURL)
 	}
 	if err != nil {
 		log.Fatalf("Error opening database: %q", err)
@@ -169,7 +155,7 @@ func main() {
 		err = initPostgres(db)
 	}
 	if err != nil {
-		log.Fatalf("Error initializing database: %q", err)
+		log.Fatalf("Error initializing database: %s", err)
 	}
 
 	router := gin.New()
@@ -208,13 +194,55 @@ func main() {
 		c.String(http.StatusOK, "new user created with id: "+userID)
 	})
 
+	router.GET("/admin/users", func(c *gin.Context) {
+		var users []UserDB
+		err := db.Collection("users").Find().All(&users)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading users. "+err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "admin_users.tmpl", users)
+	})
+
+	router.POST("/json/addUser", func(c *gin.Context) {
+		buf := &bytes.Buffer{}
+		buf.ReadFrom(c.Request.Body)
+		user := UserDB{
+			Name:     buf.String(),
+			Password: "",
+		}
+		_, err := db.Collection("users").Insert(user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't add new user."+err.Error())
+			return
+		}
+		c.String(http.StatusOK, user.Name)
+	})
+
+	router.POST("/json/removeUser", func(c *gin.Context) {
+		buf := &bytes.Buffer{}
+		buf.ReadFrom(c.Request.Body)
+		s := buf.String()
+		userid, err := strconv.Atoi(s)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid id for user to remove. "+err.Error())
+			return
+		}
+		err = db.Collection("users").Find(userid).Delete()
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't add new user. "+err.Error())
+			return
+		}
+		c.String(http.StatusOK, "removed user with id: "+s)
+	})
+
 	router.GET("/dev/exercises", func(c *gin.Context) {
 		// show all exercises
 		// page has form to add a new exercise
 		c.HTML(http.StatusOK, "exercises.tmpl", nil)
 	})
 
-	router.GET("/dev/exercises", func(c *gin.Context) {
+	router.GET("/dev/workouts", func(c *gin.Context) {
 		// show all workouts
 		// page has form to add a new workout (presents lists of exercises to add)
 		// forms to delete/edit a workout
@@ -231,77 +259,5 @@ func main() {
 		c.String(http.StatusOK, "Added workout.")
 	})
 
-	// // save all of user's data
-	// router.POST("/store", func(c *gin.Context) {
-	// 	userID, err := c.Cookie("user_id")
-	// 	if err != nil {
-	// 		c.String(http.StatusBadRequest, "Invalid cookie.")
-	// 	}
-
-	// 	users.Lock()
-	// 	defer users.Unlock()
-	// 	_, ok := users.internal[userID]
-	// 	if !ok {
-	// 		c.String(http.StatusUnauthorized, "You are not a known user.")
-	// 		users.Unlock()
-	// 		return
-	// 	}
-
-	// 	buf := bytes.NewBuffer(nil)
-	// 	io.Copy(buf, c.Request.Body)
-	// 	users.internal[userID] = string(buf.Bytes())
-
-	// 	err = Save(users)
-	// 	if err != nil {
-	// 		fmt.Println("error saving user map: " + err.Error())
-	// 	}
-
-	// 	c.String(http.StatusOK, "Saved data.")
-	// })
-
-	// // get all of user's data
-	// router.GET("/load", func(c *gin.Context) {
-	// 	userID, err := c.Cookie("user_id")
-	// 	if err != nil {
-	// 		c.String(http.StatusBadRequest, "Invalid cookie.")
-	// 	}
-	// 	users.Lock()
-	// 	defer users.Unlock()
-	// 	data, ok := users.internal[userID]
-	// 	if !ok {
-	// 		c.String(http.StatusUnauthorized, "You are not a known user.")
-	// 		return
-	// 	}
-	// 	c.PureJSON(http.StatusOK, data)
-	// })
-
 	router.Run(":" + port)
 }
-
-// func Load() (*UserMap, error) {
-// 	f, err := os.Open(filePath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer f.Close()
-// 	users := &UserMap{}
-// 	return users, json.NewDecoder(f).Decode(users)
-// }
-
-// func Save(users *UserMap) error {
-// 	f, err := os.Create(filePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer f.Close()
-// 	b, err := json.Marshal(users)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	r := bytes.NewReader(b)
-// 	_, err = io.Copy(f, r)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
