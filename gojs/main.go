@@ -138,13 +138,13 @@ func pageAdminUsers() {
 	})
 
 	userList.AddEventListener("click", false, func(evt dom.Event) {
-		userid := evt.Target().GetAttribute("userid")
+		userID := evt.Target().GetAttribute("userID")
 		evt.PreventDefault()
 		go func() {
 			req := xhr.NewRequest("POST", "/json/removeUser")
 			req.Timeout = 1000 // milliseconds
 			req.ResponseType = xhr.Text
-			err := req.Send(userid)
+			err := req.Send(userID)
 			if err != nil {
 				println(err)
 				return
@@ -155,9 +155,60 @@ func pageAdminUsers() {
 	})
 }
 
+func pageAdminExercises() {
+	button := doc.GetElementByID("add_button").(*dom.HTMLButtonElement)
+	exerciseNameText := doc.GetElementByID("exercise_name_text").(*dom.HTMLInputElement)
+	exerciseNotesText := doc.GetElementByID("exercise_notes_text").(*dom.HTMLTextAreaElement)
+	exerciseList := doc.GetElementByID("exercise_list")
+
+	button.AddEventListener("click", false, func(evt dom.Event) {
+		go func() {
+			req := xhr.NewRequest("POST", "/json/addExercise")
+			req.Timeout = 1000 // milliseconds
+			req.ResponseType = xhr.Text
+			req.SetRequestHeader("Content-Type", "application/json")
+			json, err := Marshal(
+				map[string]string{
+					"name":  exerciseNameText.Value,
+					"notes": exerciseNotesText.Value,
+				},
+			)
+			if err != nil {
+				println(err)
+				return
+			}
+			err = req.Send(json)
+			if err != nil {
+				println(err)
+				return
+			}
+			println("success adding new user: ", req.ResponseText)
+			reload()
+		}()
+	})
+
+	exerciseList.AddEventListener("click", false, func(evt dom.Event) {
+		exerciseID := evt.Target().GetAttribute("exerciseID")
+		evt.PreventDefault()
+		go func() {
+			req := xhr.NewRequest("POST", "/json/removeExercise")
+			req.Timeout = 1000 // milliseconds
+			req.ResponseType = xhr.Text
+			err := req.Send(exerciseID)
+			if err != nil {
+				println(err)
+				return
+			}
+			println("success removing exercise: ", req.ResponseText)
+			reload()
+		}()
+	})
+}
+
 var doc dom.Document
 
 func main() {
 	doc = dom.GetWindow().Document()
 	js.Global.Set("pageAdminUsers", pageAdminUsers)
+	js.Global.Set("pageAdminExercises", pageAdminExercises)
 }

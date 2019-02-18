@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	_ "github.com/heroku/x/hmetrics/onload"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,35 +22,35 @@ import (
 
 const sqliteFilePath = "userData.dat"
 
-type User struct {
-	Name     string
-	Password string
-	// todo how is int64 represented in JS?
-	Workouts  map[int64]*Workout // indexed by StartTime
-	Templates []Workout          // user's personal list of templates
-	Exercises []Exercise         // user's personal list of exercises (SetsExpected used but Sets is empty)
-}
+// type User struct {
+// 	Name     string
+// 	Password string
+// 	// todo how is int64 represented in JS?
+// 	Workouts  map[int64]*Workout // indexed by StartTime
+// 	Templates []Workout          // user's personal list of templates
+// 	Exercises []Exercise         // user's personal list of exercises (SetsExpected used but Sets is empty)
+// }
 
-type Workout struct {
-	Name      string
-	StartTime int64 // unix time
-	EndTime   int64 // unix time
-	Exercises []Exercise
-}
+// type Workout struct {
+// 	Name      string
+// 	StartTime int64 // unix time
+// 	EndTime   int64 // unix time
+// 	Exercises []Exercise
+// }
 
-type Exercise struct {
-	Name     string
-	Sets     []Set // the actual sets performed by the user
-	Expected []Set // parallel (the values expected for the user to perform)
-	Notes    string
-}
+// type Exercise struct {
+// 	Name     string
+// 	Sets     []Set // the actual sets performed by the user
+// 	Expected []Set // parallel (the values expected for the user to perform)
+// 	Notes    string
+// }
 
-type Set struct {
-	Reps     int
-	Weight   int
-	Duration int // time in milliseconds of time to perform set
-	Rest     int // time in milliseconds of rest before next exercise
-}
+// type Set struct {
+// 	Reps     int
+// 	Weight   int
+// 	Duration int // time in milliseconds of time to perform set
+// 	Rest     int // time in milliseconds of rest before next exercise
+// }
 
 func initPostgres(db sqlbuilder.Database) error {
 
@@ -60,6 +61,12 @@ type UserDB struct {
 	ID       uint64 `db:"id,omitempty"`
 	Name     string `db:"name"`
 	Password string `db:"password"`
+}
+
+type ExerciseDB struct {
+	ID    uint64 `db:"id,omitempty"`
+	Name  string `db:"name"`
+	Notes string `db:"notes"`
 }
 
 func initSqlite(db sqlbuilder.Database) error {
@@ -204,6 +211,16 @@ func main() {
 		c.HTML(http.StatusOK, "admin_users.tmpl", users)
 	})
 
+	router.GET("/admin/exercises", func(c *gin.Context) {
+		var exercises []ExerciseDB
+		err := db.Collection("exercises").Find().All(&exercises)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading exercises. "+err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "admin_exercises.tmpl", exercises)
+	})
+
 	router.POST("/json/addUser", func(c *gin.Context) {
 		buf := &bytes.Buffer{}
 		buf.ReadFrom(c.Request.Body)
@@ -223,17 +240,45 @@ func main() {
 		buf := &bytes.Buffer{}
 		buf.ReadFrom(c.Request.Body)
 		s := buf.String()
-		userid, err := strconv.Atoi(s)
+		userID, err := strconv.Atoi(s)
 		if err != nil {
 			c.String(http.StatusBadRequest, "Invalid id for user to remove. "+err.Error())
 			return
 		}
-		err = db.Collection("users").Find(userid).Delete()
+		err = db.Collection("users").Find(userID).Delete()
 		if err != nil {
-			c.String(http.StatusInternalServerError, "Couldn't add new user. "+err.Error())
+			c.String(http.StatusInternalServerError, "Couldn't remove user. "+err.Error())
 			return
 		}
 		c.String(http.StatusOK, "removed user with id: "+s)
+	})
+
+	router.POST("/json/addExercise", func(c *gin.Context) {
+		var exercise ExerciseDB
+		c.MustBindWith(&exercise, binding.JSON)
+		_, err := db.Collection("exercises").Insert(exercise)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't add new exercise."+err.Error())
+			return
+		}
+		c.String(http.StatusOK, exercise.Name)
+	})
+
+	router.POST("/json/removeExercise", func(c *gin.Context) {
+		buf := &bytes.Buffer{}
+		buf.ReadFrom(c.Request.Body)
+		s := buf.String()
+		exerciseID, err := strconv.Atoi(s)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid id for exercise to remove. "+err.Error())
+			return
+		}
+		err = db.Collection("exercises").Find(exerciseID).Delete()
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't remove exercise. "+err.Error())
+			return
+		}
+		c.String(http.StatusOK, "removed exercise with id: "+s)
 	})
 
 	router.GET("/dev/exercises", func(c *gin.Context) {

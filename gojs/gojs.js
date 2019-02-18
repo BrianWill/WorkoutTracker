@@ -12792,13 +12792,45 @@ $packages["honnef.co/go/js/xhr"] = (function() {
 	return $pkg;
 })();
 $packages["."] = (function() {
-	var $pkg = {}, $init, js, dom, xhr, ptrType$1, ptrType$2, funcType, doc, reload, pageAdminUsers, main;
+	var $pkg = {}, $init, js, dom, xhr, ptrType, ptrType$1, ptrType$2, ptrType$3, mapType, funcType, doc, Marshal, reload, pageAdminUsers, pageAdminExercises, main;
 	js = $packages["github.com/gopherjs/gopherjs/js"];
 	dom = $packages["honnef.co/go/js/dom"];
 	xhr = $packages["honnef.co/go/js/xhr"];
+	ptrType = $ptrType(js.Error);
 	ptrType$1 = $ptrType(dom.HTMLButtonElement);
 	ptrType$2 = $ptrType(dom.HTMLInputElement);
+	ptrType$3 = $ptrType(dom.HTMLTextAreaElement);
+	mapType = $mapType($String, $String);
 	funcType = $funcType([], [], false);
+	Marshal = function(o) {
+		var _tmp, _tmp$1, err, o, res, $deferred;
+		/* */ var $err = null; try { $deferred = []; $deferred.index = $curGoroutine.deferStack.length; $curGoroutine.deferStack.push($deferred);
+		res = "";
+		err = $ifaceNil;
+		$deferred.push([(function() {
+			var _tuple, e, e$1, ok;
+			e = $recover();
+			if ($interfaceIsEqual(e, $ifaceNil)) {
+				return;
+			}
+			_tuple = $assertType(e, ptrType, true);
+			e$1 = _tuple[0];
+			ok = _tuple[1];
+			if (ok) {
+				err = e$1;
+			} else {
+				$panic(e$1);
+			}
+		}), []]);
+		res = $internalize($global.JSON.stringify($externalize(o, $emptyInterface)), $String);
+		_tmp = res;
+		_tmp$1 = err;
+		res = _tmp;
+		err = _tmp$1;
+		return [res, err];
+		/* */ } catch(err) { $err = err; } finally { $callDeferred($deferred, $err); if (!$curGoroutine.asleep) { return  [res, err]; } }
+	};
+	$pkg.Marshal = Marshal;
 	reload = function() {
 		$global.location.reload();
 	};
@@ -12833,20 +12865,20 @@ $packages["."] = (function() {
 			}; })(userNameText), []);
 		}; })(userNameText));
 		_r$3 = userList.AddEventListener("click", false, (function(userNameText) { return function $b(evt) {
-			var _r$3, _r$4, evt, userid, $s, $r;
-			/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$3 = $f._r$3; _r$4 = $f._r$4; evt = $f.evt; userid = $f.userid; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
-			userid = [userid];
+			var _r$3, _r$4, evt, userID, $s, $r;
+			/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$3 = $f._r$3; _r$4 = $f._r$4; evt = $f.evt; userID = $f.userID; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+			userID = [userID];
 			_r$3 = evt.Target(); /* */ $s = 1; case 1: if($c) { $c = false; _r$3 = _r$3.$blk(); } if (_r$3 && _r$3.$blk !== undefined) { break s; }
-			_r$4 = _r$3.GetAttribute("userid"); /* */ $s = 2; case 2: if($c) { $c = false; _r$4 = _r$4.$blk(); } if (_r$4 && _r$4.$blk !== undefined) { break s; }
-			userid[0] = _r$4;
+			_r$4 = _r$3.GetAttribute("userID"); /* */ $s = 2; case 2: if($c) { $c = false; _r$4 = _r$4.$blk(); } if (_r$4 && _r$4.$blk !== undefined) { break s; }
+			userID[0] = _r$4;
 			$r = evt.PreventDefault(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-			$go((function(userNameText, userid) { return function $b() {
+			$go((function(userID, userNameText) { return function $b() {
 				var _r$5, err, req, $s, $r;
 				/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$5 = $f._r$5; err = $f.err; req = $f.req; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
 				req = xhr.NewRequest("POST", "/json/removeUser");
 				req.Object.timeout = 1000;
 				req.Object.responseType = $externalize("text", $String);
-				_r$5 = req.Send(new $String(userid[0])); /* */ $s = 1; case 1: if($c) { $c = false; _r$5 = _r$5.$blk(); } if (_r$5 && _r$5.$blk !== undefined) { break s; }
+				_r$5 = req.Send(new $String(userID[0])); /* */ $s = 1; case 1: if($c) { $c = false; _r$5 = _r$5.$blk(); } if (_r$5 && _r$5.$blk !== undefined) { break s; }
 				err = _r$5;
 				if (!($interfaceIsEqual(err, $ifaceNil))) {
 					console.log(err);
@@ -12856,13 +12888,86 @@ $packages["."] = (function() {
 				reload();
 				$s = -1; return;
 				/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$5 = _r$5; $f.err = err; $f.req = req; $f.$s = $s; $f.$r = $r; return $f;
-			}; })(userNameText, userid), []);
+			}; })(userID, userNameText), []);
 			$s = -1; return;
-			/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$3 = _r$3; $f._r$4 = _r$4; $f.evt = evt; $f.userid = userid; $f.$s = $s; $f.$r = $r; return $f;
+			/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$3 = _r$3; $f._r$4 = _r$4; $f.evt = evt; $f.userID = userID; $f.$s = $s; $f.$r = $r; return $f;
 		}; })(userNameText)); /* */ $s = 4; case 4: if($c) { $c = false; _r$3 = _r$3.$blk(); } if (_r$3 && _r$3.$blk !== undefined) { break s; }
 		_r$3;
 		$s = -1; return;
 		/* */ } return; } if ($f === undefined) { $f = { $blk: pageAdminUsers }; } $f._r = _r; $f._r$1 = _r$1; $f._r$2 = _r$2; $f._r$3 = _r$3; $f.button = button; $f.userList = userList; $f.userNameText = userNameText; $f.$s = $s; $f.$r = $r; return $f;
+	};
+	pageAdminExercises = function() {
+		var _r, _r$1, _r$2, _r$3, _r$4, button, exerciseList, exerciseNameText, exerciseNotesText, $s, $r;
+		/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r = $f._r; _r$1 = $f._r$1; _r$2 = $f._r$2; _r$3 = $f._r$3; _r$4 = $f._r$4; button = $f.button; exerciseList = $f.exerciseList; exerciseNameText = $f.exerciseNameText; exerciseNotesText = $f.exerciseNotesText; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+		exerciseNameText = [exerciseNameText];
+		exerciseNotesText = [exerciseNotesText];
+		_r = doc.GetElementByID("add_button"); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		button = $assertType(_r, ptrType$1);
+		_r$1 = doc.GetElementByID("exercise_name_text"); /* */ $s = 2; case 2: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+		exerciseNameText[0] = $assertType(_r$1, ptrType$2);
+		_r$2 = doc.GetElementByID("exercise_notes_text"); /* */ $s = 3; case 3: if($c) { $c = false; _r$2 = _r$2.$blk(); } if (_r$2 && _r$2.$blk !== undefined) { break s; }
+		exerciseNotesText[0] = $assertType(_r$2, ptrType$3);
+		_r$3 = doc.GetElementByID("exercise_list"); /* */ $s = 4; case 4: if($c) { $c = false; _r$3 = _r$3.$blk(); } if (_r$3 && _r$3.$blk !== undefined) { break s; }
+		exerciseList = _r$3;
+		button.BasicHTMLElement.BasicElement.BasicNode.AddEventListener("click", false, (function(exerciseNameText, exerciseNotesText) { return function(evt) {
+			var evt;
+			$go((function(exerciseNameText, exerciseNotesText) { return function $b() {
+				var _r$4, _tuple, err, json, req, $s, $r;
+				/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$4 = $f._r$4; _tuple = $f._tuple; err = $f.err; json = $f.json; req = $f.req; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+				req = xhr.NewRequest("POST", "/json/addExercise");
+				req.Object.timeout = 1000;
+				req.Object.responseType = $externalize("text", $String);
+				req.SetRequestHeader("Content-Type", "application/json");
+				_tuple = Marshal(new mapType($makeMap($String.keyFor, [{ k: "name", v: $internalize(exerciseNameText[0].BasicHTMLElement.BasicElement.BasicNode.Object.value, $String) }, { k: "notes", v: $internalize(exerciseNotesText[0].BasicHTMLElement.BasicElement.BasicNode.Object.value, $String) }])));
+				json = _tuple[0];
+				err = _tuple[1];
+				if (!($interfaceIsEqual(err, $ifaceNil))) {
+					console.log(err);
+					$s = -1; return;
+				}
+				_r$4 = req.Send(new $String(json)); /* */ $s = 1; case 1: if($c) { $c = false; _r$4 = _r$4.$blk(); } if (_r$4 && _r$4.$blk !== undefined) { break s; }
+				err = _r$4;
+				if (!($interfaceIsEqual(err, $ifaceNil))) {
+					console.log(err);
+					$s = -1; return;
+				}
+				console.log("success adding new user: ", $internalize(req.Object.responseText, $String));
+				reload();
+				$s = -1; return;
+				/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$4 = _r$4; $f._tuple = _tuple; $f.err = err; $f.json = json; $f.req = req; $f.$s = $s; $f.$r = $r; return $f;
+			}; })(exerciseNameText, exerciseNotesText), []);
+		}; })(exerciseNameText, exerciseNotesText));
+		_r$4 = exerciseList.AddEventListener("click", false, (function(exerciseNameText, exerciseNotesText) { return function $b(evt) {
+			var _r$4, _r$5, evt, exerciseID, $s, $r;
+			/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$4 = $f._r$4; _r$5 = $f._r$5; evt = $f.evt; exerciseID = $f.exerciseID; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+			exerciseID = [exerciseID];
+			_r$4 = evt.Target(); /* */ $s = 1; case 1: if($c) { $c = false; _r$4 = _r$4.$blk(); } if (_r$4 && _r$4.$blk !== undefined) { break s; }
+			_r$5 = _r$4.GetAttribute("exerciseID"); /* */ $s = 2; case 2: if($c) { $c = false; _r$5 = _r$5.$blk(); } if (_r$5 && _r$5.$blk !== undefined) { break s; }
+			exerciseID[0] = _r$5;
+			$r = evt.PreventDefault(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+			$go((function(exerciseID, exerciseNameText, exerciseNotesText) { return function $b() {
+				var _r$6, err, req, $s, $r;
+				/* */ $s = 0; var $f, $c = false; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; _r$6 = $f._r$6; err = $f.err; req = $f.req; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+				req = xhr.NewRequest("POST", "/json/removeExercise");
+				req.Object.timeout = 1000;
+				req.Object.responseType = $externalize("text", $String);
+				_r$6 = req.Send(new $String(exerciseID[0])); /* */ $s = 1; case 1: if($c) { $c = false; _r$6 = _r$6.$blk(); } if (_r$6 && _r$6.$blk !== undefined) { break s; }
+				err = _r$6;
+				if (!($interfaceIsEqual(err, $ifaceNil))) {
+					console.log(err);
+					$s = -1; return;
+				}
+				console.log("success removing exercise: ", $internalize(req.Object.responseText, $String));
+				reload();
+				$s = -1; return;
+				/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$6 = _r$6; $f.err = err; $f.req = req; $f.$s = $s; $f.$r = $r; return $f;
+			}; })(exerciseID, exerciseNameText, exerciseNotesText), []);
+			$s = -1; return;
+			/* */ } return; } if ($f === undefined) { $f = { $blk: $b }; } $f._r$4 = _r$4; $f._r$5 = _r$5; $f.evt = evt; $f.exerciseID = exerciseID; $f.$s = $s; $f.$r = $r; return $f;
+		}; })(exerciseNameText, exerciseNotesText)); /* */ $s = 5; case 5: if($c) { $c = false; _r$4 = _r$4.$blk(); } if (_r$4 && _r$4.$blk !== undefined) { break s; }
+		_r$4;
+		$s = -1; return;
+		/* */ } return; } if ($f === undefined) { $f = { $blk: pageAdminExercises }; } $f._r = _r; $f._r$1 = _r$1; $f._r$2 = _r$2; $f._r$3 = _r$3; $f._r$4 = _r$4; $f.button = button; $f.exerciseList = exerciseList; $f.exerciseNameText = exerciseNameText; $f.exerciseNotesText = exerciseNotesText; $f.$s = $s; $f.$r = $r; return $f;
 	};
 	main = function() {
 		var _r, $s, $r;
@@ -12870,6 +12975,7 @@ $packages["."] = (function() {
 		_r = dom.GetWindow().Document(); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
 		doc = _r;
 		$global.pageAdminUsers = $externalize(pageAdminUsers, funcType);
+		$global.pageAdminExercises = $externalize(pageAdminExercises, funcType);
 		$s = -1; return;
 		/* */ } return; } if ($f === undefined) { $f = { $blk: main }; } $f._r = _r; $f.$s = $s; $f.$r = $r; return $f;
 	};

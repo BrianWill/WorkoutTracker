@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Workout Tracker - Admin: Exercises</title>
+    <link rel="stylesheet" type="text/css" href="/static/main.css">
+    <link rel="icon" type="image/x-icon" href="/static/treadmill.ico">
+    <script src="/gojs/gojs.js"></script>
+  </head>
+  <body onload="pageAdminExercises()">
+    <div id="somediv">
+        <h1>Admin: Exercises</h1>
+        <ul id="exercise_list">
+            {{range .}}
+                <li><a exerciseID="{{.ID}}" href="">{{.Name}}</a> Notes: {{.Notes}}</li>
+            {{end}}
+        </ul>
+        <h2>Add Exercise</h2>
+        <label>Name: </label>
+        <input id="exercise_name_text" type="text">
+        <br>
+        <label>Notes: </label>
+        <textarea rows="4" cols="50" id="exercise_notes_text"></textarea>
+        <br>
+        <button id="add_button">Add Exercise</button> 
+    </div>
+  </body>
+</html>

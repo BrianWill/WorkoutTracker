@@ -1,22 +1,24 @@
 DATABASE_URL=$(heroku config:get DATABASE_URL -a brian-workout)
 
-server stores and retrieves the users JSON (everything!)
-
-    server validates that the JSON is properly formed, but data integrity could just be left up to the client
 
 
-create user
+admin pages
+    exercise s
+    workout templates
+
+    user favorited workout templates and exercises
+
+    user workout log      (workout log entry starts as a copy of template or prior workout)
+
+
 
 login
     (set cookie)
 
 
 
-list user's workouts
 
-list user's workout templates
 
-list user's exercises templates
 
 
 select workout to see its contents

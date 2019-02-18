@@ -9,17 +9,15 @@
   <body onload="pageAdminUsers()">
     <div id="somediv">
         <h1>Admin: Users</h1>
-        {{if .}}
         <ul id="user_list">
             {{range .}}
-                <li><a userid="{{.ID}}" href="">{{.Name}}</a></li>
+                <li><a userID="{{.ID}}" href="">{{.Name}}</a></li>
             {{end}}
         </ul>
-        {{end}}
         <h2>Add User</h2>
         <label>User name: </label>
         <input id="user_name_text" type="text">
-        <button id="add_button">Add User</button> 
+        <button id="add_button">Add Users</button> 
     </div>
   </body>
 </html>
