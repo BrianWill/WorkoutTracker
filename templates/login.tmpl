@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Workout Tracker</title>
+    <link rel="stylesheet" type="text/css" href="/static/main.css">
+    <link rel="icon" type="image/x-icon" href="/static/treadmill.ico">
+    <script defer src="/gojs/gojs.js"></script>
+  </head>
+  <body>
+    <div>
+        <h1>Workout Tracker</h1>
+
+        <h2>Login</h2>
+        <form action="/login" method="post">
+            <label>User name: </label>
+            <input name="username" type="text">
+            <br>
+            <label>Password: </label>
+            <input name="password" type="password">
+            <input type="submit" value="Login">
+        </form>
+
+        <h2>Create account</h2>
+        <form action="/createAccount" method="post">
+            <label>User name: </label>
+            <input name="username" type="text">
+            <br>
+            <label>Password: </label>
+            <input name="password" type="password">
+            <input type="submit" value="Create Account">
+        </form>
+    </div>
+  </body>
+</html>

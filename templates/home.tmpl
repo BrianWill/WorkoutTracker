@@ -9,6 +9,21 @@
   <body>
     <div>
       <h1>Workout Tracker</h1>
+      <h2><a href="/login">Login or create account</a></h2>
+    </div>
+    <div>
+      <h3><a href="/premadeWorkouts/">premade workouts</a></h3>
+      <h3><a href="/createWorkout/0">new workout from scratch</a></h3>
+      {{if .Prior}}
+      <h2>Your prior sessions</h2>
+      {{else}}
+      <h2>You have no prior sessions.</h2>
+      {{end}}
+      <ul>
+      {{range .Prior}}
+        <li><a href="/workout/{{.ID}}">{{.Name}} - {{.StartTime}} (edit)</a> : <a href="/deleteWorkout/{{.ID}}">(delete this session)</a> : <a href="/createWorkout/{{.ID}}">(start new session)</a></li>
+      {{end}}
+      </ul>
     </div>
   </body>
 </html>

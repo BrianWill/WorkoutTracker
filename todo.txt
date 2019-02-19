@@ -2,14 +2,12 @@ DATABASE_URL=$(heroku config:get DATABASE_URL -a brian-workout)
 
 
 
-admin pages
-    exercise s
-    workout templates
+list previous workouts in reverse chronological
 
-    user favorited workout templates and exercises
+    link to edit existing workout, link to create new workout based on previous
 
-    user workout log      (workout log entry starts as a copy of template or prior workout)
 
+delete workout session page asks for confirmation?
 
 
 login

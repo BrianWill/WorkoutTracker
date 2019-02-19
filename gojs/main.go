@@ -113,6 +113,40 @@ func Unmarshal(s string) (res *js.Object, err error) {
 	return res, err
 }
 
+func sendJSON(url string, data map[string]interface{}) {
+	go func() {
+		req := xhr.NewRequest("POST", url)
+		req.Timeout = 1000 // milliseconds
+		req.ResponseType = xhr.Text
+		req.SetRequestHeader("Content-Type", "application/json")
+		json, err := Marshal(data)
+		if err != nil {
+			println(err)
+			return
+		}
+		err = req.Send(json)
+		if err != nil {
+			println(err)
+			return
+		}
+		reload()
+	}()
+}
+
+func sendStr(url string, data string) {
+	go func() {
+		req := xhr.NewRequest("POST", url)
+		req.Timeout = 1000 // milliseconds
+		req.ResponseType = xhr.Text
+		err := req.Send(data)
+		if err != nil {
+			println(err)
+			return
+		}
+		reload()
+	}()
+}
+
 func reload() {
 	js.Global.Get("location").Call("reload")
 }
@@ -123,35 +157,13 @@ func pageAdminUsers() {
 	userList := doc.GetElementByID("user_list")
 
 	button.AddEventListener("click", false, func(evt dom.Event) {
-		go func() {
-			req := xhr.NewRequest("POST", "/json/addUser")
-			req.Timeout = 1000 // milliseconds
-			req.ResponseType = xhr.Text
-			err := req.Send(userNameText.Value)
-			if err != nil {
-				println(err)
-				return
-			}
-			println("success adding new user: ", req.ResponseText)
-			reload()
-		}()
+		sendStr("/json/addUser", userNameText.Value)
 	})
 
 	userList.AddEventListener("click", false, func(evt dom.Event) {
 		userID := evt.Target().GetAttribute("userID")
 		evt.PreventDefault()
-		go func() {
-			req := xhr.NewRequest("POST", "/json/removeUser")
-			req.Timeout = 1000 // milliseconds
-			req.ResponseType = xhr.Text
-			err := req.Send(userID)
-			if err != nil {
-				println(err)
-				return
-			}
-			println("success removing user: ", req.ResponseText)
-			reload()
-		}()
+		sendStr("/json/removeUser", userID)
 	})
 }
 
@@ -162,46 +174,59 @@ func pageAdminExercises() {
 	exerciseList := doc.GetElementByID("exercise_list")
 
 	button.AddEventListener("click", false, func(evt dom.Event) {
-		go func() {
-			req := xhr.NewRequest("POST", "/json/addExercise")
-			req.Timeout = 1000 // milliseconds
-			req.ResponseType = xhr.Text
-			req.SetRequestHeader("Content-Type", "application/json")
-			json, err := Marshal(
-				map[string]string{
-					"name":  exerciseNameText.Value,
-					"notes": exerciseNotesText.Value,
-				},
-			)
-			if err != nil {
-				println(err)
-				return
-			}
-			err = req.Send(json)
-			if err != nil {
-				println(err)
-				return
-			}
-			println("success adding new user: ", req.ResponseText)
-			reload()
-		}()
+		sendJSON("/json/addExercise", map[string]interface{}{
+			"name":  exerciseNameText.Value,
+			"notes": exerciseNotesText.Value,
+		})
 	})
 
 	exerciseList.AddEventListener("click", false, func(evt dom.Event) {
 		exerciseID := evt.Target().GetAttribute("exerciseID")
 		evt.PreventDefault()
-		go func() {
-			req := xhr.NewRequest("POST", "/json/removeExercise")
-			req.Timeout = 1000 // milliseconds
-			req.ResponseType = xhr.Text
-			err := req.Send(exerciseID)
-			if err != nil {
-				println(err)
-				return
-			}
-			println("success removing exercise: ", req.ResponseText)
-			reload()
-		}()
+		sendStr("/json/removeExercise", exerciseID)
+	})
+}
+
+func pageAdminWorkouts() {
+	button := doc.GetElementByID("add_button").(*dom.HTMLButtonElement)
+	workoutNameText := doc.GetElementByID("workout_name_text").(*dom.HTMLInputElement)
+	workoutList := doc.GetElementByID("workout_list")
+
+	button.AddEventListener("click", false, func(evt dom.Event) {
+		sendJSON("/json/addWorkout", map[string]interface{}{
+			"name": workoutNameText.Value,
+		})
+	})
+
+	workoutList.AddEventListener("click", false, func(evt dom.Event) {
+		workoutID := evt.Target().GetAttribute("workoutID")
+		evt.PreventDefault()
+		sendStr("/json/removeWorkout", workoutID)
+	})
+}
+
+func pageAdminWorkoutEdit() {
+	button := doc.GetElementByID("edit_button").(*dom.HTMLButtonElement)
+	workoutNameText := doc.GetElementByID("workout_name_text").(*dom.HTMLInputElement)
+
+	button.AddEventListener("click", false, func(evt dom.Event) {
+		sendJSON("/json/updateWorkout", map[string]interface{}{
+			"name": workoutNameText.Value,
+		})
+	})
+
+	// todo: set list links go edit set page
+}
+
+func pageAdminSetEdit() {
+	button := doc.GetElementByID("edit_button").(*dom.HTMLButtonElement)
+
+	// todo: get set info from text fields
+
+	button.AddEventListener("click", false, func(evt dom.Event) {
+		sendJSON("/json/updateSet", map[string]interface{}{
+			"reps": 0,
+		})
 	})
 }
 
@@ -211,4 +236,7 @@ func main() {
 	doc = dom.GetWindow().Document()
 	js.Global.Set("pageAdminUsers", pageAdminUsers)
 	js.Global.Set("pageAdminExercises", pageAdminExercises)
+	js.Global.Set("pageAdminWorkouts", pageAdminWorkouts)
+	js.Global.Set("pageAdminWorkoutEdit", pageAdminWorkoutEdit)
+	js.Global.Set("pageAdminSetEdit", pageAdminSetEdit)
 }

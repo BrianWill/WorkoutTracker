@@ -15,6 +15,8 @@ import (
 	_ "github.com/heroku/x/hmetrics/onload"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	uuid "github.com/satori/go.uuid"
+	up "upper.io/db.v3"
 	"upper.io/db.v3/lib/sqlbuilder"
 	"upper.io/db.v3/postgresql"
 	"upper.io/db.v3/sqlite"
@@ -60,13 +62,33 @@ func initPostgres(db sqlbuilder.Database) error {
 type UserDB struct {
 	ID       uint64 `db:"id,omitempty"`
 	Name     string `db:"name"`
+	Cookie   string `db:"cookie"`
 	Password string `db:"password"`
 }
 
 type ExerciseDB struct {
 	ID    uint64 `db:"id,omitempty"`
-	Name  string `db:"name"`
-	Notes string `db:"notes"`
+	Name  string `db:"name" json:"name"`
+	Notes string `db:"notes" json:"notes"`
+}
+
+type WorkoutDB struct {
+	ID        uint64 `db:"id,omitempty"`
+	Name      string `db:"name" json:"name"`
+	StartTime uint64 `db:"startTime" json:"startTime"`
+	EndTime   uint64 `db:"endTime" json:"endTime"`
+}
+
+type SetDB struct {
+	ID               uint64 `db:"id,omitempty"`
+	Reps             int    `db:"reps"`
+	Weight           int    `db:"weight"`
+	Duration         int    `db:"duration"` // time in milliseconds of time to perform set
+	Rest             int    `db:"rest"`     // time in milliseconds of rest before next exercise
+	RepsExpected     int    `db:"repsExpected"`
+	WeightExpected   int    `db:"weightExpected"`
+	DurationExpected int    `db:"durationExpected"` // time in milliseconds of time to perform set
+	RestExpected     int    `db:"restExpected"`     // time in milliseconds of rest before next exercise
 }
 
 func initSqlite(db sqlbuilder.Database) error {
@@ -74,6 +96,7 @@ func initSqlite(db sqlbuilder.Database) error {
 		`CREATE TABLE IF NOT EXISTS users(
 			id INTEGER PRIMARY KEY,
 			name TEXT NOT NULL,
+			cookie TEXT NOT NULL,
 			password TEXT NOT NULL
 		)`); err != nil {
 		return err
@@ -93,7 +116,9 @@ func initSqlite(db sqlbuilder.Database) error {
 			id INTEGER PRIMARY KEY,
 			name TEXT NOT NULL,
 			startTime INTEGER NOT NULL,
-			endTime INTEGER NOT NULL
+			endTime INTEGER NOT NULL,
+			user INTEGER NOT NULL,
+			FOREIGN KEY (user) REFERENCES users(id)
 		)`); err != nil {
 		return err
 	}
@@ -173,32 +198,69 @@ func main() {
 	router.Static("/gojs", "gojs")
 
 	router.GET("/", func(c *gin.Context) {
+		userID, err := c.Cookie("user_id")
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		fmt.Println(userID)
+		// todo: display this user's workouts
 		c.HTML(http.StatusOK, "home.tmpl", nil)
 	})
 
-	router.GET("/signup", func(c *gin.Context) {
-		userID, err := c.Cookie("user_id")
+	router.GET("/login", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "login.tmpl", nil)
+	})
+
+	router.POST("/login", func(c *gin.Context) {
+		// todo: put in transaction
+
+		name := c.PostForm("username")
+		password := c.PostForm("password")
+		var user UserDB
+		err := db.Collection("users").Find(up.Cond{"name": name, "password": password}).One(&user)
 		if err != nil {
-			c.String(http.StatusBadRequest, "Invalid cookie.")
+			c.String(http.StatusUnauthorized, "Bad user name and/or password.")
+			return
 		}
 
-		//// check in DB if user already exists
-		// users.Lock()
-		// defer users.Unlock()
-		// if _, ok := users.internal[userID]; ok {
-		// 	c.String(http.StatusOK, "you already have a user id: "+userID)
-		// 	return
-		// }
-		// u2 := uuid.NewV4()
-		// userID = u2.String()
-		// const tenYears = 10 * 365 * 24 * 60 * 60
-		// c.SetCookie("user_id", userID, tenYears, "/", "", false, false)
-		// bytes, err := json.Marshal(initUser())
-		// if err != nil {
-		// 	fmt.Printf("Error JSON encoding state: %+v", err)
-		// }
-		// users.internal[userID] = string(bytes)
-		c.String(http.StatusOK, "new user created with id: "+userID)
+		u2 := uuid.NewV4()
+		userID := u2.String()
+		const tenYears = 10 * 365 * 24 * 60 * 60
+		c.SetCookie("user_id", userID, tenYears, "/", "", false, false)
+
+		user.Cookie = userID
+		err = db.Collection("users").Find(user.ID).Update(user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Bad user name and/or password.")
+			return
+		}
+		c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	router.POST("/createAccount", func(c *gin.Context) {
+		name := c.PostForm("username")
+		password := c.PostForm("password")
+
+		// todo: use transaction; verify that name and password are valid
+		fmt.Println("create account with name & password: ", name, password)
+
+		u2 := uuid.NewV4()
+		userID := u2.String()
+		const tenYears = 10 * 365 * 24 * 60 * 60
+		c.SetCookie("user_id", userID, tenYears, "/", "", false, false)
+
+		_, err := db.Collection("users").Insert(UserDB{
+			Name:     name,
+			Password: password,
+			Cookie:   userID,
+		})
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error creating new user. "+err.Error())
+			return
+		}
+
+		c.Redirect(http.StatusSeeOther, "/")
 	})
 
 	router.GET("/admin/users", func(c *gin.Context) {
@@ -221,6 +283,60 @@ func main() {
 		c.HTML(http.StatusOK, "admin_exercises.tmpl", exercises)
 	})
 
+	router.GET("/admin/workouts", func(c *gin.Context) {
+		var workouts []WorkoutDB
+		err := db.Collection("workouts").Find().All(&workouts)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading workouts. "+err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "admin_workouts.tmpl", workouts)
+	})
+
+	router.GET("/admin/set/:id", func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Error bad set id. "+err.Error())
+			return
+		}
+		var set SetDB
+		err = db.Collection("sets").Find(id).One(&set)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading set. "+err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "admin_set_edit.tmpl", set)
+	})
+
+	router.GET("/admin/workout/:id", func(c *gin.Context) {
+		idStr := c.Param("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Error bad workout id. "+err.Error())
+			return
+		}
+		var workout WorkoutDB
+		err = db.Collection("workouts").Find(id).One(&workout)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading workouts. "+err.Error())
+			return
+		}
+		var sets []SetDB
+		err = db.Collection("sets").Find(up.Cond{"workout": id}).All(&sets)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading sets. "+err.Error())
+			return
+		}
+		data := struct {
+			WorkoutDB
+			Sets []SetDB
+		}{}
+		data.WorkoutDB = workout
+		data.Sets = sets
+		c.HTML(http.StatusOK, "admin_workout_edit.tmpl", data)
+	})
+
 	router.POST("/json/addUser", func(c *gin.Context) {
 		buf := &bytes.Buffer{}
 		buf.ReadFrom(c.Request.Body)
@@ -237,6 +353,7 @@ func main() {
 	})
 
 	router.POST("/json/removeUser", func(c *gin.Context) {
+		// todo: remove all workouts and sets associated with the user
 		buf := &bytes.Buffer{}
 		buf.ReadFrom(c.Request.Body)
 		s := buf.String()
@@ -281,27 +398,34 @@ func main() {
 		c.String(http.StatusOK, "removed exercise with id: "+s)
 	})
 
-	router.GET("/dev/exercises", func(c *gin.Context) {
-		// show all exercises
-		// page has form to add a new exercise
-		c.HTML(http.StatusOK, "exercises.tmpl", nil)
+	router.POST("/json/addWorkout", func(c *gin.Context) {
+		var workout WorkoutDB
+		c.MustBindWith(&workout, binding.JSON)
+		_, err := db.Collection("workouts").Insert(workout)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't add new workout. "+err.Error())
+			return
+		}
+		c.String(http.StatusOK, workout.Name)
 	})
 
-	router.GET("/dev/workouts", func(c *gin.Context) {
-		// show all workouts
-		// page has form to add a new workout (presents lists of exercises to add)
-		// forms to delete/edit a workout
-		c.HTML(http.StatusOK, "workouts.tmpl", nil)
-	})
+	router.POST("/json/removeWorkout", func(c *gin.Context) {
+		buf := &bytes.Buffer{}
+		buf.ReadFrom(c.Request.Body)
+		s := buf.String()
 
-	router.POST("/dev/addExercise", func(c *gin.Context) {
-
-		c.String(http.StatusOK, "Added exercise.")
-	})
-
-	router.POST("/dev/addWorkout", func(c *gin.Context) {
-
-		c.String(http.StatusOK, "Added workout.")
+		// todo: also remove any sets associated with the workout
+		workoutID, err := strconv.Atoi(s)
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid id for workout to remove. "+err.Error())
+			return
+		}
+		err = db.Collection("workouts").Find(workoutID).Delete()
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Couldn't remove workouts. "+err.Error())
+			return
+		}
+		c.String(http.StatusOK, "removed workout with id: "+s)
 	})
 
 	router.Run(":" + port)

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Workout Tracker - Admin: Edit Set</title>
+    <link rel="stylesheet" type="text/css" href="/static/main.css">
+    <link rel="icon" type="image/x-icon" href="/static/treadmill.ico">
+    <script src="/gojs/gojs.js"></script>
+  </head>
+  <body onload="pageAdminSetEdit()">
+    <div>
+        <h1>Admin: Edit Workout</h1>
+        <h3>{{.Name}} - {{.ID}}</h3>
+        <h2>start: {{.StartTime}} - end: {{.EndTime}}</h2>
+        <ul id="set_list">
+            {{range .Sets}}
+                <li><a href="/admin/set/{{.ID}}">id: {{.ID}}</a>  <a setID="{{.ID}}" href="">delete</a> </li>
+            {{end}}
+        </ul>
+        <h2>Edit Workout</h2>
+        <label>Name: </label>
+        <input id="workout_name_text" type="text">
+        <br>
+        <button id="edit_button">Edit Exercise</button> 
+    </div>
+  </body>
+</html>
