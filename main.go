@@ -7,14 +7,14 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	_ "github.com/heroku/x/hmetrics/onload"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+
 	uuid "github.com/satori/go.uuid"
 	up "upper.io/db.v3"
 	"upper.io/db.v3/lib/sqlbuilder"
@@ -23,36 +23,7 @@ import (
 )
 
 const sqliteFilePath = "userData.dat"
-
-// type User struct {
-// 	Name     string
-// 	Password string
-// 	// todo how is int64 represented in JS?
-// 	Workouts  map[int64]*Workout // indexed by StartTime
-// 	Templates []Workout          // user's personal list of templates
-// 	Exercises []Exercise         // user's personal list of exercises (SetsExpected used but Sets is empty)
-// }
-
-// type Workout struct {
-// 	Name      string
-// 	StartTime int64 // unix time
-// 	EndTime   int64 // unix time
-// 	Exercises []Exercise
-// }
-
-// type Exercise struct {
-// 	Name     string
-// 	Sets     []Set // the actual sets performed by the user
-// 	Expected []Set // parallel (the values expected for the user to perform)
-// 	Notes    string
-// }
-
-// type Set struct {
-// 	Reps     int
-// 	Weight   int
-// 	Duration int // time in milliseconds of time to perform set
-// 	Rest     int // time in milliseconds of rest before next exercise
-// }
+const timeFormat = "15:04 Mon _2 Jan 2006"
 
 func initPostgres(db sqlbuilder.Database) error {
 
@@ -72,15 +43,28 @@ type ExerciseDB struct {
 	Notes string `db:"notes" json:"notes"`
 }
 
+type Exercise struct {
+	ExerciseDB
+	Sets []SetDB
+}
+
 type WorkoutDB struct {
-	ID        uint64 `db:"id,omitempty"`
-	Name      string `db:"name" json:"name"`
-	StartTime uint64 `db:"startTime" json:"startTime"`
-	EndTime   uint64 `db:"endTime" json:"endTime"`
+	ID           uint64 `db:"id,omitempty"`
+	Name         string `db:"name" json:"name"`
+	StartTime    uint64 `db:"startTime" json:"startTime"`
+	StartTimeStr string
+	EndTime      uint64 `db:"endTime" json:"endTime"`
+	User         uint64 `db:"user" json:"user"`
+}
+
+type Workout struct {
+	WorkoutDB
+	Exercises []Exercise
 }
 
 type SetDB struct {
 	ID               uint64 `db:"id,omitempty"`
+	Order            int    `db:"order"` // sets of an exercise have a relative order
 	Reps             int    `db:"reps"`
 	Weight           int    `db:"weight"`
 	Duration         int    `db:"duration"` // time in milliseconds of time to perform set
@@ -106,7 +90,9 @@ func initSqlite(db sqlbuilder.Database) error {
 		`CREATE TABLE IF NOT EXISTS exercises(
 			id INTEGER PRIMARY KEY,
 			name TEXT NOT NULL,
-			notes TEXT NOT NULL
+			notes TEXT NOT NULL,
+			workout INTEGER NOT NULL,
+			FOREIGN KEY (workout) REFERENCES workouts(id)
 		)`); err != nil {
 		return err
 	}
@@ -123,9 +109,11 @@ func initSqlite(db sqlbuilder.Database) error {
 		return err
 	}
 
+	//
 	if _, err := db.Exec(
 		`CREATE TABLE IF NOT EXISTS sets(
 			id INTEGER PRIMARY KEY,
+			order            INTEGER NOT NULL,    /* first is 0, second is 1, etc. */
 			reps     		 INTEGER NOT NULL,
 			weight   		 INTEGER NOT NULL,
 			duration 		 INTEGER NOT NULL,
@@ -135,20 +123,7 @@ func initSqlite(db sqlbuilder.Database) error {
 			durationExpected INTEGER NOT NULL,
 			restExpected     INTEGER NOT NULL,
 			exercise INTEGER NOT NULL,
-			workout INTEGER NOT NULL,
 			FOREIGN KEY (exercise) REFERENCES exercises(id),
-			FOREIGN KEY (workout) REFERENCES workouts(id)
-		)`); err != nil {
-		return err
-	}
-
-	if _, err := db.Exec(
-		`CREATE TABLE IF NOT EXISTS workout_exercises(
-			id INTEGER PRIMARY KEY,
-			exercise INTEGER NOT NULL,
-			workout INTEGER NOT NULL,
-			FOREIGN KEY (exercise) REFERENCES exercises(id),
-			FOREIGN KEY (workout) REFERENCES workouts(id)
 		)`); err != nil {
 		return err
 	}
@@ -198,14 +173,30 @@ func main() {
 	router.Static("/gojs", "gojs")
 
 	router.GET("/", func(c *gin.Context) {
-		userID, err := c.Cookie("user_id")
+		userCookie, err := c.Cookie("user_id")
 		if err != nil {
 			c.Redirect(http.StatusSeeOther, "/login")
 			return
 		}
-		fmt.Println(userID)
-		// todo: display this user's workouts
-		c.HTML(http.StatusOK, "home.tmpl", nil)
+		user := UserDB{}
+		err = db.Collection("users").Find(up.Cond{"cookie": userCookie}).One(&user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user info. "+err.Error())
+			return
+		}
+		workouts := []WorkoutDB{}
+		err = db.Collection("workouts").Find(up.Cond{"user": user.ID}).All(&workouts)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user workouts. "+err.Error())
+			return
+		}
+		sort.Slice(workouts, func(i, j int) bool {
+			return workouts[i].StartTime < workouts[j].StartTime
+		})
+		for i, v := range workouts {
+			workouts[i].StartTimeStr = time.Unix(int64(v.StartTime), 0).Format(timeFormat)
+		}
+		c.HTML(http.StatusOK, "home.tmpl", workouts)
 	})
 
 	router.GET("/login", func(c *gin.Context) {
@@ -260,6 +251,142 @@ func main() {
 			return
 		}
 
+		c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	router.GET("/createWorkout", func(c *gin.Context) {
+		userCookie, err := c.Cookie("user_id")
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		user := UserDB{}
+		err = db.Collection("users").Find(up.Cond{"cookie": userCookie}).One(&user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user info. "+err.Error())
+			return
+		}
+		workout := WorkoutDB{
+			Name:      "new session",
+			User:      user.ID,
+			StartTime: uint64(time.Now().Unix()),
+		}
+		_, err = db.Collection("workouts").Insert(workout)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error creating new workout session. "+err.Error())
+			return
+		}
+		c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	router.GET("/createWorkout/:id", func(c *gin.Context) {
+		workoutID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid workout ID.")
+			return
+		}
+		userCookie, err := c.Cookie("user_id")
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		user := UserDB{}
+		err = db.Collection("users").Find(up.Cond{"cookie": userCookie}).One(&user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user info. "+err.Error())
+			return
+		}
+		var workout WorkoutDB
+		err = db.Collection("workouts").Find(workoutID).One(&workout)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error deleting workout session. "+err.Error())
+			return
+		}
+		workout.ID = 0 // must be zero for auto-increment ID
+		workout.StartTime = uint64(time.Now().Unix())
+		// todo: copy all exercises associated with the workout
+		_, err = db.Collection("workouts").Insert(workout)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error creating new workout session. "+err.Error())
+			return
+		}
+		c.Redirect(http.StatusSeeOther, "/")
+	})
+
+	router.GET("/workout/:id", func(c *gin.Context) {
+		workoutID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid workout ID.")
+			return
+		}
+		userCookie, err := c.Cookie("user_id")
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		user := UserDB{}
+		err = db.Collection("users").Find(up.Cond{"cookie": userCookie}).One(&user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user info. "+err.Error())
+			return
+		}
+
+		q := db.Select("w.id AS workout_id", "e.id AS exercise_id", "s.id AS set_id", "*").
+			From("workouts AS w").Where("w.user = ?", user.ID).And("w.id = ?", workoutID).
+			Join("exercises AS e").On("e.workout = w.id").
+			Join("sets AS s").On("s.exercise = e.id").
+			OrderBy("w.id", "e.id", "s.order")
+		row := struct {
+			WorkoutID    uint64 `db:"workout_id"`
+			ExerciseID   uint64 `db:"exercise_id"`
+			SetID        uint64 `db:"set_id"`
+			WorkoutName  string `db:"workout_name"`
+			ExerciseName string `db:"exercise_name"`
+			WorkoutDB    `db:",inline"`
+			ExerciseDB   `db:",inline"`
+			SetDB        `db:",inline"`
+		}{}
+		iter := q.Iterator()
+		defer iter.Close()
+		workout := Workout{}
+		count := 0
+		for iter.Next(&row) {
+
+			count++
+		}
+		if err = iter.Err(); err != nil {
+			c.String(http.StatusInternalServerError, "Error reading workout. "+err.Error())
+			return
+		}
+		if count == 0 {
+			c.String(http.StatusBadRequest, "No workout matching that ID. "+err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "workout.tmpl", workout)
+	})
+
+	router.GET("/deleteWorkout/:id", func(c *gin.Context) {
+		workoutID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.String(http.StatusBadRequest, "Invalid workout ID.")
+			return
+		}
+		userCookie, err := c.Cookie("user_id")
+		if err != nil {
+			c.Redirect(http.StatusSeeOther, "/login")
+			return
+		}
+		user := UserDB{}
+		err = db.Collection("users").Find(up.Cond{"cookie": userCookie}).One(&user)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error reading user info. Your user cookie may be invalid. "+err.Error())
+			return
+		}
+		err = db.Collection("workouts").Find(workoutID).Delete()
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Error deleting workout session. "+err.Error())
+			return
+		}
 		c.Redirect(http.StatusSeeOther, "/")
 	})
 

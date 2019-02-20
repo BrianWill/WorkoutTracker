@@ -7,6 +7,8 @@ github.com/gin-gonic/gin v1.3.1-0.20190204012700-5acf6601170b h1:xjF2L+9evUIX5jC
 github.com/gin-gonic/gin v1.3.1-0.20190204012700-5acf6601170b/go.mod h1:1LxhNsJuqDSRHN+tYaDKqQ8vYKN30DhOqscovOEg5i8=
 github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e h1:JKmoR8x90Iww1ks85zJ1lfDGgIiMDuIptTOhJq+zKyg=
+github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/heroku/x v0.0.0-20181102215100-85e5aa5e6aa1 h1:I8YR/oRdhG/wb78Z5MBbeWkLPuhEZd/uKXub8LMyBGk=
 github.com/heroku/x v0.0.0-20181102215100-85e5aa5e6aa1/go.mod h1:opmAyjmIGn9/Y+9Nia6eIaktIXIoMhhFXEFbHLMsX3Y=
 github.com/json-iterator/go v1.1.5 h1:gL2yXlmiIo4+t+y32d4WGwOjKGYcGOuyrg46vadswDE=
@@ -49,5 +51,11 @@ gopkg.in/go-playground/validator.v8 v8.18.2 h1:lFB4DoMU6B626w8ny76MV7VX6W2VHct2G
 gopkg.in/go-playground/validator.v8 v8.18.2/go.mod h1:RX2a/7Ha8BgOhfk7j780h4/u/RRjR0eouCJSH80/M2Y=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+honnef.co/go/js/dom v0.0.0-20181202134054-9dbdcd412bde h1:a/zxkB+dOtFR2DO19YIQtrpHfuZVprzJsA19Og0p53A=
+honnef.co/go/js/dom v0.0.0-20181202134054-9dbdcd412bde/go.mod h1:sUMDUKNB2ZcVjt92UnLy3cdGs+wDAcrPdV3JP6sVgA4=
+honnef.co/go/js/util v0.0.0-20150216223935-96b8dd9d1621 h1:QBApQyt1KyR3SvDWU8sHcIXeWTSCUamO7xQopvwuLWI=
+honnef.co/go/js/util v0.0.0-20150216223935-96b8dd9d1621/go.mod h1:WrAIh8rWfzvMdLVgQ7vpu7aYbDAZ3rHLxydzv2VkL/w=
+honnef.co/go/js/xhr v0.0.0-20150307031022-00e3346113ae h1:2dIKMawnBWvHzZrS8STyu/KdhYIOpnKQpp1WZm+K7TE=
+honnef.co/go/js/xhr v0.0.0-20150307031022-00e3346113ae/go.mod h1:QwoYXdHZpuR080H32s5jqyk7zh/k/U9bDFg2g8OMmOM=
 upper.io/db.v3 v3.5.7+incompatible h1:3MJSnJQ+NMxBxuNwO+gOKFiugwv+f61LbyuZYSPzoi4=
 upper.io/db.v3 v3.5.7+incompatible/go.mod h1:FgTdD24eBjJAbPKsQSiHUNgXjOR4Lub3u1UMHSIh82Y=

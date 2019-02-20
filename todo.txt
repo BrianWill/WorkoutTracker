@@ -1,14 +1,26 @@
 DATABASE_URL=$(heroku config:get DATABASE_URL -a brian-workout)
 
 
+create workout from scratch
+    starts with zero exercises
+
+
 
 list previous workouts in reverse chronological
 
     link to edit existing workout, link to create new workout based on previous
 
 
+
+add exercise to session from canned list of exercises
+    most have three sets by default, with recommended rest times and rep count (weight is always zero)
+
+
+
 delete workout session page asks for confirmation?
 
+
+display times/dates in user's timezone (query from their browser?)
 
 login
     (set cookie)

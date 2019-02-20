@@ -9,13 +9,10 @@
   <body>
     <div>
       <h1>Workout Tracker</h1>
-      <h2><a href="/login">Login or create account</a></h2>
+      <h2><a href="/">Home</a></h2>
     </div>
     <div>
-      <h3><a href="/premadeWorkouts/">premade workouts</a></h3>
-      <h3><a href="/createWorkout/">new workout session from scratch</a></h3>
-      {{if .}}
-      <h2>Your prior sessions</h2>
+      <h2>Workout: {{}}Your prior sessions</h2>
       {{else}}
       <h2>You have no prior sessions. Start a new session from scratch or from a premade workout.</h2>
       {{end}}
